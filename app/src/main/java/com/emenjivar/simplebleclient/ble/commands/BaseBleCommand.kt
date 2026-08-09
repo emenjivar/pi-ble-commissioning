@@ -3,9 +3,15 @@ package com.emenjivar.simplebleclient.ble.commands
 import java.util.UUID
 
 val primaryServiceUUID: UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df20")
+val jsonServiceUUID: UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df30")
+
 val ledCharacteristicUUID: UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df21")
 val getIPCharacteristicUUID: UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df22")
 val getSSIDCharacteristicUUID: UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df23")
+
+// JSON-related characteristics
+val requestDataEmissionUUID: UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df31")
+val readDataEmissionUUID: UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df32")
 
 // Used for listening notification changes
 val clientCharacteristicConfigUUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")

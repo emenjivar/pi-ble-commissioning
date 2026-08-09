@@ -93,6 +93,21 @@ class MockBleManager(
         }
     }
 
+    override suspend fun getMTU(): Int {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun <T> write(
+        command: BleCommand.Write<T>,
+        value: T
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun <T> read(command: BleCommand.Read<T>): T {
+        TODO("Not yet implemented")
+    }
+
     private fun fakeValueFor(characteristic: UUID): ByteArray? {
         val connectedDevice = connectionState.value as? BleConnectionState.Connected ?: return null
         val device = mockBleDataSource.getDeviceDataByMacAddress(

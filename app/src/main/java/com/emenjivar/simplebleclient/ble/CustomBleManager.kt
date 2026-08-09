@@ -22,4 +22,8 @@ interface CustomBleManager {
     fun <T> observe(command: BleCommand.Read<T>): Flow<T>
     fun <T> readCharacteristic(command: BleCommand.Read<T>)
     fun <T> writeCharacteristic(command: BleCommand.Write<T>, value: T)
+
+    suspend fun getMTU(): Int
+    suspend fun <T> write(command: BleCommand.Write<T>, value: T)
+    suspend fun <T> read(command: BleCommand.Read<T>): T
 }
