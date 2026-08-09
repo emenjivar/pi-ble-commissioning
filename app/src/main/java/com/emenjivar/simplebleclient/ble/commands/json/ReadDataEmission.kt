@@ -5,12 +5,11 @@ import com.emenjivar.simplebleclient.ble.commands.jsonServiceUUID
 import com.emenjivar.simplebleclient.ble.commands.readDataEmissionUUID
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import kotlin.experimental.and
 
 data class JSONChunk(
     val currentOffset: Int,
     val totalSize: Int,
-    val content: ByteArray
+    val content: List<Byte>
 )
 
 /**
@@ -34,7 +33,7 @@ object ReadDataEmission: BleCommand.Read<JSONChunk>(
         return JSONChunk(
             currentOffset = buffer.getShort().toInt() and 0xFFFF,
             totalSize = buffer.getShort().toInt() and 0xFFFF,
-            content = bytes.copyOfRange(fromIndex = 4, toIndex = bytes.size)
+            content = bytes.copyOfRange(fromIndex = 4, toIndex = bytes.size).toList()
         )
     }
 

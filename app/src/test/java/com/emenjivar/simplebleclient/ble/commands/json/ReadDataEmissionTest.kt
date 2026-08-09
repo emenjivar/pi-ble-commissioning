@@ -1,8 +1,8 @@
 package com.emenjivar.simplebleclient.ble.commands.json
 
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReadDataEmissionTest {
@@ -24,7 +24,7 @@ class ReadDataEmissionTest {
         val chunk = ReadDataEmission.decode(packet)
         assertEquals(currentOffset, chunk.currentOffset)
         assertEquals(totalSize, chunk.totalSize)
-        assertArrayEquals(byteArrayOf(0x01, 0x02, 0x03, 0x04), chunk.content)
+        assertEquals(listOf<Byte>(0x01, 0x02, 0x03, 0x04), chunk.content)
     }
 
     @Test
@@ -79,6 +79,6 @@ class ReadDataEmissionTest {
         val chunk = ReadDataEmission.decode(packet)
         assertEquals(0, chunk.currentOffset)
         assertEquals(0, chunk.totalSize)
-        assertArrayEquals(byteArrayOf(), chunk.content)
+        assertTrue(chunk.content.isEmpty())
     }
 }
