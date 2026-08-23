@@ -39,5 +39,4 @@ class ReadVerifyIntegrityTest {
             ReadDataEmission.decode(packet)
         }
     }
-
 }

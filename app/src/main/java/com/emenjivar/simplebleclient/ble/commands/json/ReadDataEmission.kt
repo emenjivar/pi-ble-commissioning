@@ -36,5 +36,4 @@ object ReadDataEmission: BleCommand.Read<JSONChunk>(
             content = bytes.copyOfRange(fromIndex = 4, toIndex = bytes.size).toList()
         )
     }
-
 }
