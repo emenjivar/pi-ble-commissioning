@@ -7,7 +7,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * Writes a CRC32 code to the GATT server
+ * Send a CRC32 code to the GATT server
  */
 object WriteVerifyIntegrity: BleCommand.Write<Long>(
     service = jsonServiceUUID,
