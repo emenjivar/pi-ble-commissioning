@@ -29,6 +29,7 @@ class BleJsonManager(
             receivedBytes.addAll(newResponse.content)
         }
 
+
         return String(receivedBytes.toByteArray(), Charsets.UTF_8)
     }
 
