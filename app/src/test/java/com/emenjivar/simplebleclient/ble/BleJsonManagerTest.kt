@@ -4,40 +4,61 @@ import com.emenjivar.simplebleclient.ble.commands.json.JSONChunk
 import com.emenjivar.simplebleclient.ble.commands.json.ReadDataEmission
 import com.emenjivar.simplebleclient.ble.commands.json.RequestDataEmission
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.Serializable
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 class BleJsonManagerTest {
 
     @Test
-    fun `collectDataTransmission should call RequestDataEmission for resetting the offset in the FW side`() =
-        runTest {
-            val mtuSize = 120
-            val bleManager = mock<CustomBleManager>()
-            val bleJsonManager = BleJsonManager(bleManager)
+    fun `resetOffset should write the usable chunk size to RequestDataEmission`() = runTest {
+        val mtuSize = 120
+        val bleManager = mock<CustomBleManager>()
+        whenever(bleManager.getMTU()).thenReturn(mtuSize)
+        val bleJsonManager = BleJsonManager(bleManager)
 
-            whenever(bleManager.getMTU()).thenReturn(mtuSize)
-            // We don't really care about the parsing, so mocking an ampty response is fine
-            whenever(bleManager.read(ReadDataEmission)).thenReturn(
-                JSONChunk(
-                    currentOffset = 0,
-                    totalSize = 0,
-                    content = emptyList()
-                )
+        bleJsonManager.resetOffset()
+
+        val expectedChunkSize = bleJsonManager.getUsableBytesPerChunk()
+        verify(bleManager)
+            .write(
+                command = RequestDataEmission,
+                value = expectedChunkSize
             )
+    }
 
-            bleJsonManager.collectDataTransmission()
+    @Test
+    fun `collectDataTransmission should reset the offset every time it's called`() = runTest {
+        val mtuSize = 120
+        val bleManager = mock<CustomBleManager>()
+        whenever(bleManager.getMTU()).thenReturn(mtuSize)
 
-            val expectedChunkSize = bleJsonManager.getUsableBytesPerChunk()
-            verify(bleManager)
-                .write(
-                    command = RequestDataEmission,
-                    value = expectedChunkSize
-                )
-        }
+        // We don't care about the parsing here (covered elsewhere), so an empty
+        // response is fine even though it makes collectDataTransmission throw.
+        whenever(bleManager.read(ReadDataEmission)).thenReturn(
+            JSONChunk(
+                currentOffset = 0,
+                totalSize = 0,
+                content = emptyList()
+            )
+        )
+        val bleJsonManager = BleJsonManager(bleManager)
+
+        // Call it twice, to prove the reset happens on every call, not just the first
+        runCatching { bleJsonManager.collectDataTransmission<Any>() }
+        runCatching { bleJsonManager.collectDataTransmission<Any>() }
+
+        val expectedChunkSize = bleJsonManager.getUsableBytesPerChunk()
+        verify(bleManager, times(2))
+            .write(
+                command = RequestDataEmission,
+                value = expectedChunkSize
+            )
+    }
 
     @Test
     fun `getUsableBytesPerChunk should subtract ATT and chuck headers from MTU`() = runTest {
@@ -52,6 +73,9 @@ class BleJsonManagerTest {
     @Test
     fun `collectDataTransmission should reassemble chunks into the original JSON string`() =
         runTest {
+            @Serializable
+            data class TestJSON(val message: String)
+
             val mtuSize = 8
             val json = "{ \"message\" : \"hello\" }"
             val byteArray = json.toByteArray(Charsets.UTF_8)
@@ -73,7 +97,7 @@ class BleJsonManagerTest {
 
             val bleJsonManager = BleJsonManager(bleManager)
 
-            val result = bleJsonManager.collectDataTransmission()
-            assertEquals(json, result)
+            val result = bleJsonManager.collectDataTransmission<TestJSON>()
+            assertEquals(TestJSON(message = "hello"), result)
         }
 }

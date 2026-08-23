@@ -2,17 +2,24 @@ package com.emenjivar.simplebleclient.ble
 
 import com.emenjivar.simplebleclient.ble.commands.json.ReadDataEmission
 import com.emenjivar.simplebleclient.ble.commands.json.RequestDataEmission
+import kotlinx.serialization.json.Json
 
 // TODO: use a better naming HERE
 class BleJsonManager(
     private val bleManager: CustomBleManager
 ) {
-    suspend fun collectDataTransmission(): String {
-        // Reset the offset on the FW side
+    /**
+     * Resets the offset of the chunk-emissions
+     */
+    internal suspend fun resetOffset() {
         bleManager.write(
             command = RequestDataEmission,
             value = getUsableBytesPerChunk()
         )
+    }
+
+    internal suspend inline fun <reified T> collectDataTransmission(): T {
+        resetOffset()
 
         val response = bleManager.read(ReadDataEmission)
         var currentOffset: Int = response.currentOffset
@@ -29,8 +36,9 @@ class BleJsonManager(
             receivedBytes.addAll(newResponse.content)
         }
 
-
-        return String(receivedBytes.toByteArray(), Charsets.UTF_8)
+        val json = String(receivedBytes.toByteArray(), Charsets.UTF_8)
+        val payload = Json.decodeFromString<T>(json)
+        return payload
     }
 
     suspend fun getUsableBytesPerChunk(): Int = bleManager.getMTU() - ATT_HEADER_SIZE - CHUNK_HEADER_SIZE
