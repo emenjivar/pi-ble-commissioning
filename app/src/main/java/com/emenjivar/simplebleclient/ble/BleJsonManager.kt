@@ -1,21 +1,38 @@
 package com.emenjivar.simplebleclient.ble
 
+import com.emenjivar.simplebleclient.ble.commands.json.ReadDataEmission
 import com.emenjivar.simplebleclient.ble.commands.json.RequestDataEmission
 
 // TODO: use a better naming HERE
 class BleJsonManager(
-    private val bleManager: CustomBleManager,
-    private val bleNotifications: BleNotifications
+    private val bleManager: CustomBleManager
 ) {
-    // TODO: should happens one single time unless a disconnection happens
-    suspend fun prepare() {
-        val usableBytesPerChunk = bleManager.getMTU() - ATT_HEADER_SIZE - CHUNK_HEADER_SIZE
-        bleManager.write(RequestDataEmission, usableBytesPerChunk)
+    suspend fun collectDataTransmission(): String {
+        // Reset the offset on the FW side
+        bleManager.write(
+            command = RequestDataEmission,
+            value = getUsableBytesPerChunk()
+        )
+
+        val response = bleManager.read(ReadDataEmission)
+        var currentOffset: Int = response.currentOffset
+        var totalSize: Int = response.totalSize
+        val receivedBytes = mutableListOf<Byte>()
+        receivedBytes.addAll(response.content)
+
+        while (currentOffset < totalSize) {
+            val newResponse = bleManager.read(ReadDataEmission)
+            currentOffset = newResponse.currentOffset
+
+            // This value should be the same for all the requests
+            totalSize = newResponse.totalSize
+            receivedBytes.addAll(newResponse.content)
+        }
+
+        return String(receivedBytes.toByteArray(), Charsets.UTF_8)
     }
 
-    suspend fun collectDataTransmission() {
-        // bleNotifications.observe()
-    }
+    suspend fun getUsableBytesPerChunk(): Int = bleManager.getMTU() - ATT_HEADER_SIZE - CHUNK_HEADER_SIZE
 
     companion object {
         // Bytes used for ATT DPU header, prepend on every packet by the low level BLE protocol
