@@ -5,7 +5,9 @@ import com.emenjivar.simplebleclient.ble.commands.json.ReadDataEmission
 import com.emenjivar.simplebleclient.ble.commands.json.RequestDataEmission
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
@@ -78,18 +80,7 @@ class BleJsonManagerTest {
 
             val mtuSize = 8
             val json = "{ \"message\" : \"hello\" }"
-            val byteArray = json.toByteArray(Charsets.UTF_8)
-
-            // Split the JSON into 8-byte chunks
-            val chunks = byteArray.toList().chunked(mtuSize).mapIndexed { index, bytes ->
-                JSONChunk(
-                    currentOffset = ((index + 1) * mtuSize).coerceAtMost(byteArray.size),
-                    totalSize = byteArray.size,
-                    content = bytes
-                )
-            }
-
-            val chunkIterator = chunks.iterator()
+            val chunkIterator = chunkString(value = json, mtuSize = mtuSize)
             val bleManager = mock<CustomBleManager>()
             whenever(bleManager.getMTU()).thenReturn(mtuSize)
             whenever(bleManager.read(ReadDataEmission))
@@ -100,4 +91,151 @@ class BleJsonManagerTest {
             val result = bleJsonManager.collectDataTransmission<TestJSON>()
             assertEquals(TestJSON(message = "hello"), result)
         }
+
+    // Cannot declare it inside the test function
+    enum class ConnectionState {
+        CONNECTED, ERROR
+    }
+
+    @Test
+    fun `collectDataTransmission should parse long and nested JSONs`() = runTest {
+        // Given some complex/nested data classes
+        @Serializable
+        data class SensorReading(
+            val name: String,
+            val value: Double,
+            val unit: String,
+            val timestamp: Long
+        )
+
+        @Serializable
+        data class NetworkInfo(
+            val ssid: String,
+            val rssi: Int,
+            val ipAddress: String,
+            val state: ConnectionState,
+            val errorMessage: String?
+        )
+
+        @Serializable
+        data class StatusSnapshot(
+            val deviceId: String,
+            val firmwareVersion: String,
+            val batteryLevel: Int,
+            val isCharging: Boolean,
+            val uptimeSeconds: Long,
+            val sensors: List<SensorReading>,
+            val network: NetworkInfo,
+            val tags: List<String>
+        )
+
+        val longJSON = """
+            {
+                "deviceId": "pi001",
+                "firmwareVersion": "1.0.0",
+                "batteryLevel": 87,
+                "isCharging": false,
+                "uptimeSeconds": 18430,
+                "sensors": [
+                        { "name": "temperature", "value": 22.5, "unit": "celsius", "timestamp": 1735489200 },
+                        { "name": "humidity", "value": 48.2, "unit": "percent", "timestamp": 1735489200 },
+                        { "name": "pressure", "value": 1013.25, "unit": "hpa", "timestamp": 1735489201 }
+                ],
+                "network" : {
+                    "ssid": "Network5G",
+                    "rssi": -58,
+                    "ipAddress": "192.168.1.2",
+                    "state": "CONNECTED",
+                    "errorMessage": null
+                },
+                "tags": [ "school", "zone1", "outdoor" ]
+            }
+        """.trimIndent()
+
+        val mtuSize = 16
+        val iterator = chunkString(value = longJSON, mtuSize = mtuSize)
+        val bleManager = mock<CustomBleManager>()
+        whenever(bleManager.getMTU()).thenReturn(mtuSize)
+        whenever(bleManager.read(ReadDataEmission))
+            .thenAnswer { iterator.next() }
+
+        val bleJsonManager = BleJsonManager(bleManager = bleManager)
+
+        val result = bleJsonManager.collectDataTransmission<StatusSnapshot>()
+        val expectedStatusSnapshot = StatusSnapshot(
+            deviceId = "pi001",
+            firmwareVersion = "1.0.0",
+            batteryLevel = 87,
+            isCharging = false,
+            uptimeSeconds = 18430,
+            sensors = listOf(
+                SensorReading(
+                    name = "temperature",
+                    value = 22.5,
+                    unit = "celsius",
+                    timestamp = 1735489200
+                ),
+                SensorReading(
+                    name = "humidity",
+                    value = 48.2,
+                    unit = "percent",
+                    timestamp = 1735489200
+                ),
+                SensorReading(
+                    name = "pressure",
+                    value = 1013.25,
+                    unit = "hpa",
+                    timestamp = 1735489201
+                )
+            ),
+            network = NetworkInfo(
+                ssid = "Network5G",
+                rssi = -58,
+                ipAddress = "192.168.1.2",
+                state = ConnectionState.CONNECTED,
+                errorMessage = null
+            ),
+            tags = listOf("school", "zone1", "outdoor")
+        )
+        assertEquals(expectedStatusSnapshot, result)
+    }
+
+    @Test
+    fun `collectDataTransmission should throw an exception when parsing an invalid JSON`() =
+        runTest {
+            @Serializable
+            data class TestJSON(val message: String)
+
+            val mtuSize = 8
+
+            // Missing the closing brace on purpose
+            val invalidJson = "{ \"message\" : \"hello\" "
+
+            val chunkIterator = chunkString(value = invalidJson, mtuSize = mtuSize)
+            val bleManager = mock<CustomBleManager>()
+            whenever(bleManager.getMTU()).thenReturn(mtuSize)
+            whenever(bleManager.read(ReadDataEmission))
+                .thenAnswer { chunkIterator.next() }
+
+            val bleJsonManager = BleJsonManager(bleManager)
+
+            val result = runCatching { bleJsonManager.collectDataTransmission<TestJSON>() }
+
+            assertTrue(result.isFailure)
+            assertTrue(result.exceptionOrNull() is SerializationException)
+        }
+
+    private fun chunkString(value: String, mtuSize: Int): Iterator<JSONChunk> {
+        val byteArray = value.toByteArray(Charsets.UTF_8)
+        val chunkSize = byteArray.size / mtuSize
+        val chunks = byteArray.toList().chunked(chunkSize)
+            .mapIndexed { index, bytes ->
+                JSONChunk(
+                    currentOffset = ((index + 1) * chunkSize).coerceAtMost(byteArray.size),
+                    totalSize = byteArray.size,
+                    content = bytes
+                )
+            }
+        return chunks.iterator()
+    }
 }
