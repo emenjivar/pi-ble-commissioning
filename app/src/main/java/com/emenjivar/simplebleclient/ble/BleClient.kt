@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
  * Contract exposed to the ViewModels. The active flavor (`raspberry` or `mock`)
  * decides which implementation is injected.
  */
-interface CustomBleManager {
+interface BleClient {
     val connectionState: StateFlow<BleConnectionState>
     val scannedDevices: StateFlow<List<BluetoothDeviceModel>>
 

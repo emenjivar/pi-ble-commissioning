@@ -14,18 +14,18 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
-class BleJsonManagerTest {
+class ChunkJsonDecoderTest {
 
     @Test
     fun `resetOffset should write the usable chunk size to RequestDataEmission`() = runTest {
         val mtuSize = 120
-        val bleManager = mock<CustomBleManager>()
+        val bleManager = mock<BleClient>()
         whenever(bleManager.getMTU()).thenReturn(mtuSize)
-        val bleJsonManager = BleJsonManager(bleManager)
+        val chunkJsonDecoder = ChunkJsonDecoder(bleManager)
 
-        bleJsonManager.resetOffset()
+        chunkJsonDecoder.resetOffset()
 
-        val expectedChunkSize = bleJsonManager.getUsableBytesPerChunk()
+        val expectedChunkSize = chunkJsonDecoder.getUsableBytesPerChunk()
         verify(bleManager)
             .write(
                 command = RequestDataEmission,
@@ -36,7 +36,7 @@ class BleJsonManagerTest {
     @Test
     fun `collectDataTransmission should reset the offset every time it's called`() = runTest {
         val mtuSize = 120
-        val bleManager = mock<CustomBleManager>()
+        val bleManager = mock<BleClient>()
         whenever(bleManager.getMTU()).thenReturn(mtuSize)
 
         // We don't care about the parsing here (covered elsewhere), so an empty
@@ -48,13 +48,13 @@ class BleJsonManagerTest {
                 content = emptyList()
             )
         )
-        val bleJsonManager = BleJsonManager(bleManager)
+        val chunkJsonDecoder = ChunkJsonDecoder(bleManager)
 
         // Call it twice, to prove the reset happens on every call, not just the first
-        runCatching { bleJsonManager.collectDataTransmission<Any>() }
-        runCatching { bleJsonManager.collectDataTransmission<Any>() }
+        runCatching { chunkJsonDecoder.collectDataTransmission<Any>() }
+        runCatching { chunkJsonDecoder.collectDataTransmission<Any>() }
 
-        val expectedChunkSize = bleJsonManager.getUsableBytesPerChunk()
+        val expectedChunkSize = chunkJsonDecoder.getUsableBytesPerChunk()
         verify(bleManager, times(2))
             .write(
                 command = RequestDataEmission,
@@ -64,11 +64,11 @@ class BleJsonManagerTest {
 
     @Test
     fun `getUsableBytesPerChunk should subtract ATT and chuck headers from MTU`() = runTest {
-        val bleManager = mock<CustomBleManager>()
+        val bleManager = mock<BleClient>()
         whenever(bleManager.getMTU()).thenReturn(120)
-        val bleJsonManager = BleJsonManager(bleManager)
+        val chunkJsonDecoder = ChunkJsonDecoder(bleManager)
 
-        val result = bleJsonManager.getUsableBytesPerChunk()
+        val result = chunkJsonDecoder.getUsableBytesPerChunk()
         assertEquals(113, result) // 120 - 3 (ATT header) - 4 (chunk header)
     }
 
@@ -81,14 +81,14 @@ class BleJsonManagerTest {
             val mtuSize = 8
             val json = "{ \"message\" : \"hello\" }"
             val chunkIterator = chunkString(value = json, mtuSize = mtuSize)
-            val bleManager = mock<CustomBleManager>()
+            val bleManager = mock<BleClient>()
             whenever(bleManager.getMTU()).thenReturn(mtuSize)
             whenever(bleManager.read(ReadDataEmission))
                 .thenAnswer { chunkIterator.next() }
 
-            val bleJsonManager = BleJsonManager(bleManager)
+            val chunkJsonDecoder = ChunkJsonDecoder(bleManager)
 
-            val result = bleJsonManager.collectDataTransmission<TestJSON>()
+            val result = chunkJsonDecoder.collectDataTransmission<TestJSON>()
             assertEquals(TestJSON(message = "hello"), result)
         }
 
@@ -154,14 +154,14 @@ class BleJsonManagerTest {
 
         val mtuSize = 16
         val iterator = chunkString(value = longJSON, mtuSize = mtuSize)
-        val bleManager = mock<CustomBleManager>()
+        val bleManager = mock<BleClient>()
         whenever(bleManager.getMTU()).thenReturn(mtuSize)
         whenever(bleManager.read(ReadDataEmission))
             .thenAnswer { iterator.next() }
 
-        val bleJsonManager = BleJsonManager(bleManager = bleManager)
+        val chunkJsonDecoder = ChunkJsonDecoder(bleManager = bleManager)
 
-        val result = bleJsonManager.collectDataTransmission<StatusSnapshot>()
+        val result = chunkJsonDecoder.collectDataTransmission<StatusSnapshot>()
         val expectedStatusSnapshot = StatusSnapshot(
             deviceId = "pi001",
             firmwareVersion = "1.0.0",
@@ -212,14 +212,14 @@ class BleJsonManagerTest {
             val invalidJson = "{ \"message\" : \"hello\" "
 
             val chunkIterator = chunkString(value = invalidJson, mtuSize = mtuSize)
-            val bleManager = mock<CustomBleManager>()
+            val bleManager = mock<BleClient>()
             whenever(bleManager.getMTU()).thenReturn(mtuSize)
             whenever(bleManager.read(ReadDataEmission))
                 .thenAnswer { chunkIterator.next() }
 
-            val bleJsonManager = BleJsonManager(bleManager)
+            val chunkJsonDecoder = ChunkJsonDecoder(bleManager)
 
-            val result = runCatching { bleJsonManager.collectDataTransmission<TestJSON>() }
+            val result = runCatching { chunkJsonDecoder.collectDataTransmission<TestJSON>() }
 
             assertTrue(result.isFailure)
             assertTrue(result.exceptionOrNull() is SerializationException)

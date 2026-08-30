@@ -28,12 +28,12 @@ import kotlinx.coroutines.flow.update
  * Selected when the `raspberry` flavor is active.
  */
 @SuppressLint("MissingPermission")
-class RaspberryBleManager(
+class RaspberryBleClient(
     private val context: Context,
     private val bleNotifications: BleNotifications,
     private val bleOperationQueue: BleOperationQueue,
     private val scanner: BleScanner
-) : CustomBleManager, BleScanner by scanner {
+) : BleClient, BleScanner by scanner {
     private var bluetoothGatt: BluetoothGatt? = null
     private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Disconnected)
     override val connectionState: StateFlow<BleConnectionState> = _connectionState.asStateFlow()

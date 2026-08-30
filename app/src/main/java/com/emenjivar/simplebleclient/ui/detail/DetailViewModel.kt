@@ -10,7 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.emenjivar.simplebleclient.ble.model.BleConnectionState
 import com.emenjivar.simplebleclient.ble.model.BluetoothDeviceModel
-import com.emenjivar.simplebleclient.ble.CustomBleManager
+import com.emenjivar.simplebleclient.ble.BleClient
 import com.emenjivar.simplebleclient.ble.commands.GetIPAddress
 import com.emenjivar.simplebleclient.ble.commands.GetSSID
 import com.emenjivar.simplebleclient.ble.commands.LEDCommand
@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.update
 @HiltViewModel(assistedFactory = DetailViewModel.Factory::class)
 class DetailViewModel @AssistedInject constructor(
     @ApplicationContext private val context: Context,
-    private val customBluetoothManager: CustomBleManager,
+    private val bleClient: BleClient,
     @Assisted private val route: DetailRoute,
 ) : ViewModel() {
 
@@ -47,13 +47,13 @@ class DetailViewModel @AssistedInject constructor(
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
 
     // Assuming a connected device
-    val connectionState = customBluetoothManager.connectionState
+    val connectionState = bleClient.connectionState
 
-    private val ipAddress = customBluetoothManager.observe(GetIPAddress)
-    private val ssid = customBluetoothManager.observe(GetSSID)
+    private val ipAddress = bleClient.observe(GetIPAddress)
+    private val ssid = bleClient.observe(GetSSID)
 
     // Notification type, needs an initial default value
-    private val ledState = customBluetoothManager.observe(ReadLedStatus)
+    private val ledState = bleClient.observe(ReadLedStatus)
         .onStart { emit(LEDCommand.OFF) }
 
     init {
@@ -62,8 +62,8 @@ class DetailViewModel @AssistedInject constructor(
         // Read characteristics when connection is ready
         connectionState.onEach { state ->
             if (state is BleConnectionState.Connected && state.ready) {
-                customBluetoothManager.readCharacteristic(GetIPAddress)
-                customBluetoothManager.readCharacteristic(GetSSID)
+                bleClient.readCharacteristic(GetIPAddress)
+                bleClient.readCharacteristic(GetSSID)
             }
         }.launchIn(viewModelScope)
 
@@ -86,14 +86,14 @@ class DetailViewModel @AssistedInject constructor(
     }
 
     fun updateLedState(state: LEDCommand) {
-        customBluetoothManager.writeCharacteristic(WriteLedStatus, state)
+        bleClient.writeCharacteristic(WriteLedStatus, state)
     }
 
-    private fun connect(device: BluetoothDeviceModel) = customBluetoothManager.connect(device)
+    private fun connect(device: BluetoothDeviceModel) = bleClient.connect(device)
 
     fun connect() = connect(route.device)
 
-    fun disconnect() = customBluetoothManager.disconnect()
+    fun disconnect() = bleClient.disconnect()
 
     @SuppressLint("MissingPermission")
     fun scanWifiNetworks() {

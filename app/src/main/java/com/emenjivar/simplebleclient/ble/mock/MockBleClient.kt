@@ -1,7 +1,7 @@
 package com.emenjivar.simplebleclient.ble.mock
 
 import com.emenjivar.simplebleclient.ble.BleNotifications
-import com.emenjivar.simplebleclient.ble.CustomBleManager
+import com.emenjivar.simplebleclient.ble.BleClient
 import com.emenjivar.simplebleclient.ble.commands.BleCommand
 import com.emenjivar.simplebleclient.ble.commands.LEDCommand
 import com.emenjivar.simplebleclient.ble.commands.getIPCharacteristicUUID
@@ -26,10 +26,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * Fake BLE implementation that lets the app run end-to-end without a peripheral.
  * Selected when the `mock` flavor is active.
  */
-class MockBleManager(
+class MockBleClient(
     private val bleNotifications: BleNotifications,
     private val mockBleDataSource: MockBleDataSource
-) : CustomBleManager {
+) : BleClient {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

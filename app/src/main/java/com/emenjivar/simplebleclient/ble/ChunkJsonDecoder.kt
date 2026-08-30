@@ -4,9 +4,8 @@ import com.emenjivar.simplebleclient.ble.commands.json.ReadDataEmission
 import com.emenjivar.simplebleclient.ble.commands.json.RequestDataEmission
 import kotlinx.serialization.json.Json
 
-// TODO: use a better naming HERE
-class BleJsonManager(
-    private val bleManager: CustomBleManager
+class ChunkJsonDecoder(
+    private val bleManager: BleClient
 ) {
     /**
      * Resets the offset of the chunk-emissions
