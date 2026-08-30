@@ -27,6 +27,12 @@ sealed class BleCommand<T> {
         override val service: UUID,
         override val characteristic: UUID,
     ): BleCommand<T>() {
+        /**
+         * Converts [value] into the raw bytes written to [characteristic].
+         *
+         * @param value the value to be sent, in whatever unit/shape the caller uses.
+         * @return the exact bytes written to the characteristic.
+         */
         abstract fun encode(value: T): ByteArray
     }
 
@@ -36,6 +42,12 @@ sealed class BleCommand<T> {
     ): BleCommand<T>() {
         val combinedHash = combineHash(service, characteristic)
 
+        /**
+         * Converts the raw bytes read from [characteristic] back into [T].
+         *
+         * @param bytes the raw bytes read from the characteristic.
+         * @return the decoded value.
+         */
         abstract fun decode(bytes: ByteArray): T
 
         // Runs when each object in initialized, self-registering into a shared map.
