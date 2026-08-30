@@ -11,6 +11,7 @@ import android.content.Context
 import android.os.Build
 import com.emenjivar.simplebleclient.ble.commands.BleCommand
 import com.emenjivar.simplebleclient.ble.commands.clientCharacteristicConfigUUID
+import com.emenjivar.simplebleclient.ble.commands.json.JSONChunk
 import com.emenjivar.simplebleclient.ble.commands.ledCharacteristicUUID
 import com.emenjivar.simplebleclient.ble.commands.primaryServiceUUID
 import com.emenjivar.simplebleclient.ble.exceptions.CharacteristicNotFoundException
@@ -28,12 +29,12 @@ import kotlinx.coroutines.flow.update
  * Selected when the `raspberry` flavor is active.
  */
 @SuppressLint("MissingPermission")
-class RaspberryBleManager(
+class RaspberryBleClient(
     private val context: Context,
     private val bleNotifications: BleNotifications,
     private val bleOperationQueue: BleOperationQueue,
     private val scanner: BleScanner
-) : CustomBleManager, BleScanner by scanner {
+) : BleClient, BleScanner by scanner {
     private var bluetoothGatt: BluetoothGatt? = null
     private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Disconnected)
     override val connectionState: StateFlow<BleConnectionState> = _connectionState.asStateFlow()
@@ -210,6 +211,25 @@ class RaspberryBleManager(
                 bluetoothGatt?.writeCharacteristic(characteristic)
             }
         }
+    }
+
+    override suspend fun getMTU(): Int {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun <T> write(
+        command: BleCommand.Write<T>,
+        value: T
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun <T> read(command: BleCommand.Read<T>): T {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun read(command: BleCommand.ReadJSON): JSONChunk {
+        TODO("Not yet implemented")
     }
 
     private fun <T> BleCommand<T>.getCharacteristic(): BluetoothGattCharacteristic? {

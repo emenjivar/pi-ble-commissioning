@@ -1,11 +1,12 @@
 package com.emenjivar.simplebleclient.ble.mock
 
 import com.emenjivar.simplebleclient.ble.BleNotifications
-import com.emenjivar.simplebleclient.ble.CustomBleManager
+import com.emenjivar.simplebleclient.ble.BleClient
 import com.emenjivar.simplebleclient.ble.commands.BleCommand
 import com.emenjivar.simplebleclient.ble.commands.LEDCommand
 import com.emenjivar.simplebleclient.ble.commands.getIPCharacteristicUUID
 import com.emenjivar.simplebleclient.ble.commands.getSSIDCharacteristicUUID
+import com.emenjivar.simplebleclient.ble.commands.json.JSONChunk
 import com.emenjivar.simplebleclient.ble.commands.ledCharacteristicUUID
 import com.emenjivar.simplebleclient.ble.model.BleConnectionState
 import com.emenjivar.simplebleclient.ble.model.BluetoothDeviceModel
@@ -26,10 +27,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * Fake BLE implementation that lets the app run end-to-end without a peripheral.
  * Selected when the `mock` flavor is active.
  */
-class MockBleManager(
+class MockBleClient(
     private val bleNotifications: BleNotifications,
     private val mockBleDataSource: MockBleDataSource
-) : CustomBleManager {
+) : BleClient {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -91,6 +92,25 @@ class MockBleManager(
                 value = byteArrayOf(value.bytes)
             )
         }
+    }
+
+    override suspend fun getMTU(): Int {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun <T> write(
+        command: BleCommand.Write<T>,
+        value: T
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun <T> read(command: BleCommand.Read<T>): T {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun read(command: BleCommand.ReadJSON): JSONChunk {
+        TODO("Not yet implemented")
     }
 
     private fun fakeValueFor(characteristic: UUID): ByteArray? {

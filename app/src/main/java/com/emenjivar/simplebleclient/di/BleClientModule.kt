@@ -6,10 +6,10 @@ import com.emenjivar.simplebleclient.ble.BleNotifications
 import com.emenjivar.simplebleclient.ble.BleOperationQueue
 import com.emenjivar.simplebleclient.ble.BleScanner
 import com.emenjivar.simplebleclient.ble.BleScannerImp
-import com.emenjivar.simplebleclient.ble.CustomBleManager
-import com.emenjivar.simplebleclient.ble.RaspberryBleManager
+import com.emenjivar.simplebleclient.ble.BleClient
+import com.emenjivar.simplebleclient.ble.RaspberryBleClient
 import com.emenjivar.simplebleclient.ble.mock.MockBleDataSource
-import com.emenjivar.simplebleclient.ble.mock.MockBleManager
+import com.emenjivar.simplebleclient.ble.mock.MockBleClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,7 +19,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object BleManagerModule {
+object BleClientModule {
 
     @Provides
     @Singleton
@@ -43,15 +43,15 @@ object BleManagerModule {
         bleOperationQueue: BleOperationQueue,
         scanner: BleScanner,
         mockBleDataSource: MockBleDataSource
-    ): CustomBleManager = when (BuildConfig.FLAVOR) {
-        "raspberry" -> RaspberryBleManager(
+    ): BleClient = when (BuildConfig.FLAVOR) {
+        "raspberry" -> RaspberryBleClient(
             context = context,
             bleNotifications = bleNotifications,
             bleOperationQueue = bleOperationQueue,
             scanner = scanner
         )
 
-        else -> MockBleManager(
+        else -> MockBleClient(
             bleNotifications = bleNotifications,
             mockBleDataSource = mockBleDataSource
         )
