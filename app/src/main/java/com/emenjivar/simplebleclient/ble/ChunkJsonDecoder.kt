@@ -1,7 +1,6 @@
 package com.emenjivar.simplebleclient.ble
 
-import com.emenjivar.simplebleclient.ble.commands.json.ReadDataEmission
-import com.emenjivar.simplebleclient.ble.commands.json.RequestDataEmission
+import com.emenjivar.simplebleclient.ble.commands.BleCommand
 import kotlinx.serialization.json.Json
 
 class ChunkJsonDecoder(
@@ -10,24 +9,31 @@ class ChunkJsonDecoder(
     /**
      * Resets the offset of the chunk-emissions
      */
-    internal suspend fun resetOffset() {
+    internal suspend fun resetOffset(command: BleCommand.Write<Int>) {
         bleManager.write(
-            command = RequestDataEmission,
+            command = command,
             value = getUsableBytesPerChunk()
         )
     }
 
-    internal suspend inline fun <reified T> collectDataTransmission(): T {
-        resetOffset()
+    /**
+     * @param readCommand Command for fetching a JSON through the GAT server
+     * @param resetCommand Reset the offset of the chunk emission before executing [readCommand]
+     */
+    internal suspend inline fun <reified T> fetchJSON(
+        readCommand: BleCommand.ReadJSON,
+        resetCommand: BleCommand.Write<Int>
+    ): T {
+        resetOffset(resetCommand)
 
-        val response = bleManager.read(ReadDataEmission)
+        val response = bleManager.read(readCommand)
         var currentOffset: Int = response.currentOffset
         var totalSize: Int = response.totalSize
         val receivedBytes = mutableListOf<Byte>()
         receivedBytes.addAll(response.content)
 
         while (currentOffset < totalSize) {
-            val newResponse = bleManager.read(ReadDataEmission)
+            val newResponse = bleManager.read(readCommand)
             currentOffset = newResponse.currentOffset
 
             // This value should be the same for all the requests

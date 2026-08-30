@@ -1,6 +1,7 @@
 package com.emenjivar.simplebleclient.ble
 
 import com.emenjivar.simplebleclient.ble.commands.BleCommand
+import com.emenjivar.simplebleclient.ble.commands.json.JSONChunk
 import com.emenjivar.simplebleclient.ble.model.BleConnectionState
 import com.emenjivar.simplebleclient.ble.model.BluetoothDeviceModel
 import kotlinx.coroutines.flow.Flow
@@ -26,4 +27,9 @@ interface BleClient {
     suspend fun getMTU(): Int
     suspend fun <T> write(command: BleCommand.Write<T>, value: T)
     suspend fun <T> read(command: BleCommand.Read<T>): T
+
+    /**
+     * Same as read<T> but for JSON
+     */
+    suspend fun read(command: BleCommand.ReadJSON): JSONChunk
 }

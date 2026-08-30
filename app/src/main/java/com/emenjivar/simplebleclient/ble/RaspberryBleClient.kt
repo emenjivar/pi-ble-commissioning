@@ -11,6 +11,7 @@ import android.content.Context
 import android.os.Build
 import com.emenjivar.simplebleclient.ble.commands.BleCommand
 import com.emenjivar.simplebleclient.ble.commands.clientCharacteristicConfigUUID
+import com.emenjivar.simplebleclient.ble.commands.json.JSONChunk
 import com.emenjivar.simplebleclient.ble.commands.ledCharacteristicUUID
 import com.emenjivar.simplebleclient.ble.commands.primaryServiceUUID
 import com.emenjivar.simplebleclient.ble.exceptions.CharacteristicNotFoundException
@@ -224,6 +225,10 @@ class RaspberryBleClient(
     }
 
     override suspend fun <T> read(command: BleCommand.Read<T>): T {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun read(command: BleCommand.ReadJSON): JSONChunk {
         TODO("Not yet implemented")
     }
 

@@ -2,7 +2,7 @@ package com.emenjivar.simplebleclient.ble
 
 import com.emenjivar.simplebleclient.ble.commands.json.JSONChunk
 import com.emenjivar.simplebleclient.ble.commands.json.ReadDataEmission
-import com.emenjivar.simplebleclient.ble.commands.json.RequestDataEmission
+import com.emenjivar.simplebleclient.ble.commands.json.ResetDataEmission
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -23,24 +23,24 @@ class ChunkJsonDecoderTest {
         whenever(bleManager.getMTU()).thenReturn(mtuSize)
         val chunkJsonDecoder = ChunkJsonDecoder(bleManager)
 
-        chunkJsonDecoder.resetOffset()
+        chunkJsonDecoder.resetOffset(ResetDataEmission)
 
         val expectedChunkSize = chunkJsonDecoder.getUsableBytesPerChunk()
         verify(bleManager)
             .write(
-                command = RequestDataEmission,
+                command = ResetDataEmission,
                 value = expectedChunkSize
             )
     }
 
     @Test
-    fun `collectDataTransmission should reset the offset every time it's called`() = runTest {
+    fun `fetchJSON should reset the offset every time it's called`() = runTest {
         val mtuSize = 120
         val bleManager = mock<BleClient>()
         whenever(bleManager.getMTU()).thenReturn(mtuSize)
 
         // We don't care about the parsing here (covered elsewhere), so an empty
-        // response is fine even though it makes collectDataTransmission throw.
+        // response is fine even though it makes fetchJSON throw.
         whenever(bleManager.read(ReadDataEmission)).thenReturn(
             JSONChunk(
                 currentOffset = 0,
@@ -51,13 +51,22 @@ class ChunkJsonDecoderTest {
         val chunkJsonDecoder = ChunkJsonDecoder(bleManager)
 
         // Call it twice, to prove the reset happens on every call, not just the first
-        runCatching { chunkJsonDecoder.collectDataTransmission<Any>() }
-        runCatching { chunkJsonDecoder.collectDataTransmission<Any>() }
+        runCatching {
+            chunkJsonDecoder.fetchJSON<Any>(
+                readCommand = ReadDataEmission,
+                resetCommand = ResetDataEmission
+            )
+        }
+        runCatching { chunkJsonDecoder.fetchJSON<Any>(
+            readCommand = ReadDataEmission,
+            resetCommand = ResetDataEmission
+            )
+        }
 
         val expectedChunkSize = chunkJsonDecoder.getUsableBytesPerChunk()
         verify(bleManager, times(2))
             .write(
-                command = RequestDataEmission,
+                command = ResetDataEmission,
                 value = expectedChunkSize
             )
     }
@@ -73,7 +82,7 @@ class ChunkJsonDecoderTest {
     }
 
     @Test
-    fun `collectDataTransmission should reassemble chunks into the original JSON string`() =
+    fun `fetchJSON should reassemble chunks into the original JSON string`() =
         runTest {
             @Serializable
             data class TestJSON(val message: String)
@@ -88,7 +97,10 @@ class ChunkJsonDecoderTest {
 
             val chunkJsonDecoder = ChunkJsonDecoder(bleManager)
 
-            val result = chunkJsonDecoder.collectDataTransmission<TestJSON>()
+            val result = chunkJsonDecoder.fetchJSON<TestJSON>(
+                readCommand = ReadDataEmission,
+                resetCommand = ResetDataEmission
+            )
             assertEquals(TestJSON(message = "hello"), result)
         }
 
@@ -98,7 +110,7 @@ class ChunkJsonDecoderTest {
     }
 
     @Test
-    fun `collectDataTransmission should parse long and nested JSONs`() = runTest {
+    fun `fetchJSON should parse long and nested JSONs`() = runTest {
         // Given some complex/nested data classes
         @Serializable
         data class SensorReading(
@@ -161,7 +173,10 @@ class ChunkJsonDecoderTest {
 
         val chunkJsonDecoder = ChunkJsonDecoder(bleManager = bleManager)
 
-        val result = chunkJsonDecoder.collectDataTransmission<StatusSnapshot>()
+        val result = chunkJsonDecoder.fetchJSON<StatusSnapshot>(
+            readCommand = ReadDataEmission,
+            resetCommand = ResetDataEmission
+        )
         val expectedStatusSnapshot = StatusSnapshot(
             deviceId = "pi001",
             firmwareVersion = "1.0.0",
@@ -201,7 +216,7 @@ class ChunkJsonDecoderTest {
     }
 
     @Test
-    fun `collectDataTransmission should throw an exception when parsing an invalid JSON`() =
+    fun `fetchJSON should throw an exception when parsing an invalid JSON`() =
         runTest {
             @Serializable
             data class TestJSON(val message: String)
@@ -219,7 +234,12 @@ class ChunkJsonDecoderTest {
 
             val chunkJsonDecoder = ChunkJsonDecoder(bleManager)
 
-            val result = runCatching { chunkJsonDecoder.collectDataTransmission<TestJSON>() }
+            val result = runCatching {
+                chunkJsonDecoder.fetchJSON<TestJSON>(
+                    readCommand = ReadDataEmission,
+                    resetCommand = ResetDataEmission
+                )
+            }
 
             assertTrue(result.isFailure)
             assertTrue(result.exceptionOrNull() is SerializationException)
